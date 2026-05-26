@@ -1,0 +1,52 @@
+// src/screens/MasScreen.tsx
+// Placeholder. Aquí irán: iniciar sesión / perfil, historial de pedidos,
+// configuración, ayuda, términos, etc.
+
+import { View, Text, StyleSheet, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors } from '../theme/colors';
+
+export default function MasScreen() {
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.headerDark} />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Más</Text>
+      </View>
+      <View style={styles.body}>
+        <Text style={styles.title}>En construcción</Text>
+        <Text style={styles.subtitle}>
+          Iniciar sesión, historial de pedidos, configuración y ayuda.
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
+  header: {
+    backgroundColor: colors.headerDark,
+    paddingVertical: 18,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: colors.textInverse,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  body: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  title: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 8 },
+  subtitle: {
+    fontSize: 15,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+});
