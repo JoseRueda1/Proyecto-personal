@@ -1,9 +1,6 @@
 // src/screens/PandaPoScreen.tsx
-// Sistema de puntos PandaPoints:
-//   - Tarjeta circular con 7 sellos (rellenos según progreso)
-//   - Contador grande de puntos
-//   - Botón SELLAR (futuro: abre escáner QR o input código)
-//   - Lista de recompensas canjeables
+// Muestra puntos, sellos visuales y recompensas canjeables.
+// Estado leído desde AppContext (los puntos solo suben al usar cupones).
 
 import {
   View,
@@ -12,27 +9,46 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-
-type IconName = keyof typeof Ionicons.glyphMap;
+import { useApp } from '../context/AppContext';
+import type { Reward } from '../data/rewardsCatalog';
 
 const STAMPS_TOTAL = 7;
-const STAMPS_FILLED = 5;
-const POINTS = 5;
-
-const REWARDS: { id: string; icon: IconName; title: string; cost: number }[] = [
-  { id: '1', icon: 'wine-outline', title: 'Bebida pequeña gratis', cost: 5 },
-  { id: '2', icon: 'ice-cream-outline', title: 'Postre gratis', cost: 7 },
-  { id: '3', icon: 'pricetag-outline', title: '10% de descuento', cost: 4 },
-  { id: '4', icon: 'restaurant-outline', title: 'Combo clásico + 1 guarnición', cost: 10 },
-  { id: '5', icon: 'calendar-outline', title: '2x1 Martes Panda', cost: 6 },
-  { id: '6', icon: 'gift-outline', title: 'Producto sorpresa', cost: 8 },
-];
 
 export default function PandaPoScreen() {
+  const { points, rewards, redeemReward } = useApp();
+  const stampsFilled = Math.min(points, STAMPS_TOTAL);
+
+  const handleRedeem = (reward: Reward) => {
+    if (points < reward.cost) {
+      Alert.alert(
+        'Puntos insuficientes',
+        `Necesitas ${reward.cost - points} punto(s) más para canjear "${reward.title}".`
+      );
+      return;
+    }
+    Alert.alert(
+      '¿Canjear recompensa?',
+      `Vas a usar ${reward.cost} puntos por:\n${reward.title}`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Canjear',
+          onPress: () => {
+            const result = redeemReward(reward);
+            if (result.ok) {
+              Alert.alert('¡Listo!', `Disfruta tu ${reward.title.toLowerCase()}.`);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={colors.headerDark} />
@@ -54,7 +70,7 @@ export default function PandaPoScreen() {
               const radius = 110;
               const x = Math.cos(angle) * radius;
               const y = Math.sin(angle) * radius;
-              const filled = i < STAMPS_FILLED;
+              const filled = i < stampsFilled;
               return (
                 <View
                   key={i}
@@ -74,30 +90,26 @@ export default function PandaPoScreen() {
             })}
 
             <View style={styles.center}>
-              <Text style={styles.pointsValue}>{POINTS}</Text>
+              <Text style={styles.pointsValue}>{points}</Text>
               <Text style={styles.pointsLabel}>PUNTOS</Text>
             </View>
           </View>
 
-          <TouchableOpacity style={styles.sellButton} activeOpacity={0.85}>
-            <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
-            <Text style={styles.sellButtonText}>SELLAR</Text>
-          </TouchableOpacity>
-
           <Text style={styles.helpText}>
-            Acumula sellos con cada pedido y canjéalos por recompensas
+            Acumula puntos usando tus cupones y canjéalos por recompensas
           </Text>
         </View>
 
         <View style={styles.rewardsSection}>
           <Text style={styles.sectionTitle}>Recompensas</Text>
-          {REWARDS.map((reward) => {
-            const canAfford = POINTS >= reward.cost;
+          {rewards.map((reward) => {
+            const canAfford = points >= reward.cost;
             return (
               <TouchableOpacity
                 key={reward.id}
-                style={styles.rewardCard}
+                style={[styles.rewardCard, !canAfford && styles.rewardCardLocked]}
                 activeOpacity={0.7}
+                onPress={() => handleRedeem(reward)}
               >
                 <View style={styles.rewardIconWrap}>
                   <Ionicons name={reward.icon} size={22} color={colors.primary} />
@@ -197,28 +209,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     opacity: 0.9,
   },
-
-  sellButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.textInverse,
-    paddingVertical: 14,
-    paddingHorizontal: 44,
-    borderRadius: 28,
-    marginTop: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-  },
-  sellButtonText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.primary,
-    letterSpacing: 1.5,
-  },
   helpText: {
     color: colors.textInverse,
     opacity: 0.85,
@@ -228,9 +218,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
 
-  rewardsSection: {
-    padding: 20,
-  },
+  rewardsSection: { padding: 20 },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
@@ -248,6 +236,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  rewardCardLocked: { opacity: 0.6 },
   rewardIconWrap: {
     width: 44,
     height: 44,
@@ -258,18 +247,7 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   rewardInfo: { flex: 1 },
-  rewardTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  rewardCost: {
-    fontSize: 13,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  rewardCostAvailable: {
-    color: colors.success,
-    fontWeight: '700',
-  },
+  rewardTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
+  rewardCost: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  rewardCostAvailable: { color: colors.success, fontWeight: '700' },
 });
